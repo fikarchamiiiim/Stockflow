@@ -230,7 +230,7 @@ Returns the order with `status: "CANCELLED"`, `cancelled_at` set, and stock rest
    `UPDATE products SET stock = stock - qty WHERE id = ? AND stock >= qty`
 
 4. **Order creation locks rows in a deterministic order.**
-   `SELECT ... FOR UPDATE` for all SKUs `ORDER BY sku`, then a guarded `UPDATE` per item, all inside one transaction. The lock makes the stock check consistent; the guard is a second line of defence. Ordering by SKU prevents two overlapping orders from deadlocking.
+   `SELECT ... FOR UPDATE` for all SKUs `ORDER BY sku`, then a guarded `UPDATE` per item, all inside one transaction. The lock makes the stock check consistent
 
 5. **Cancel is idempotent by status guard.**
    `UPDATE ... WHERE id = ? AND status = 'CREATED'` decides whether the restoration runs. Two concurrent cancels produce one `200` and one `409 ALREADY_CANCELLED`, and stock is restored exactly once. Items are locked in the same SKU order as creation.
@@ -245,7 +245,7 @@ Returns the order with `status: "CANCELLED"`, `cancelled_at` set, and stock rest
    GORM infers the wrong direction when the foreign key and the referenced column share a name (`sku`), generating `products.sku REFERENCES sales_order_items.sku`. A small idempotent `DO $$ ... $$` block in `Migrate` adds the correct constraint. It is `ON UPDATE CASCADE`, so renaming a product SKU keeps history attached.
 
 9. **One API client module, typed from the server contract.**
-    `src/api/client.ts` owns URL building, JSON parsing, the error envelope, and `AbortSignal`. Domain types live in `src/types/api.ts`; components never build URLs. Reads accept an `AbortSignal` (results can go stale); mutations deliberately do not, because aborting a POST does not undo it on the server.
+    `src/api/client.ts` owns URL building, JSON parsing, the error envelope, and `AbortSignal`. Domain types live in `src/types/api.ts`, components never build URLs. Reads accept an `AbortSignal` (results can go stale), mutations deliberately do not, because aborting a POST does not undo it on the server.
 
 10. **Search is server-side, filters are client-side.**
     `search` goes to `?search=`, debounced 300 ms. `All/Active/Inactive/Low stock` filter the fetched page in the browser because the API contract has no parameter for them. Known limitation: with more than 100 products, the low-stock filter only sees the first page.
@@ -255,14 +255,14 @@ Returns the order with `status: "CANCELLED"`, `cancelled_at` set, and stock rest
 
 ## What I would improve next
 
-- **Pagination in the UI.** The API already supports `page`/`limit`; the table currently requests the first 100 rows and filters client-side.
+- **Pagination in the UI.** The API already supports `page`/`limit`, the table currently requests the first 100 rows and filters client-side.
 - **Server-side low-stock filter** (for example `?low_stock=true`) so the filter does not depend on the page size.
 - **Idempotency-Key on `POST /api/orders`**, so a retried request cannot create a duplicate order.
 - **Order history per customer / daily sales report** (`GET /api/reports/daily-sales?date=`).
 - **CI pipeline** running `go vet`, `go test -race`, `tsc -b`, `oxlint`, and `vitest`.
 - **Use OpenSearch** Since the user will search any SKU in bunch of data, OpenSearch is right choice to execute this.
 - **End-to-end test** (Playwright) for the create-order → cancel → stock-restored flow.
-- **Auth/roles** — out of scope for this exercise; every endpoint is currently open.
+- **Auth/roles** — out of scope for this repo, every endpoint is currently open.
 
 ## Time spent
 
