@@ -137,7 +137,6 @@ export default function OrderDetailPage() {
 
           <p>
             <strong>Total: {formatRupiah(state.order.total)}</strong>{' '}
-            <span className="muted">(computed by server)</span>
           </p>
 
           {cancelError !== null && (
